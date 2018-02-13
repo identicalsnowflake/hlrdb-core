@@ -7,13 +7,11 @@ the front on overflow.
 
 module HLRDB.Structures.List
        (
-         listGet
-       , listAppend
-       , listPrepend
-       , listAppend'
-       , listPrepend'
-       , listRemove
-       , listLength
+         HLRDB.Structures.List.lrange
+       , lappend
+       , lprepend
+       , HLRDB.Structures.List.lrem
+       , HLRDB.Structures.List.llen
        ) where
 
 import Data.Functor.Identity
@@ -24,25 +22,17 @@ import HLRDB.Util
 
 
 -- | Retrieve a range of elements, common Indexes include @fullIndex@, @firstIndex@, and @fromTo 0 10@
-listGet :: RedisList a b -> a -> Indexes -> Redis [ b ]
-listGet p@(RList (E _ _ d) _) k (Indexes (i,j)) =
-  fmap (d . pure) <$> unwrap (lrange (primKey p k) i j)
+lrange :: RedisList a b -> a -> Indexes -> Redis [ b ]
+lrange p@(RList (E _ _ d) _) k (Indexes (i,j)) =
+  fmap (d . pure) <$> unwrap (Redis.lrange (primKey p k) i j)
 
--- | Append an item to the end of a list. Unlike Haskell lists, this is O(1)
-listAppend :: RedisList a b -> a -> b -> Redis ()
-listAppend p k b = addItem True p k [ b ]
+-- | Append items to the end of a list
+lappend :: RedisList a b -> a -> [ b ] -> Redis ()
+lappend = addItem True
 
--- | Prepend an item
-listPrepend :: RedisList a b -> a -> b -> Redis ()
-listPrepend p k b = addItem False p k [ b ]
-
--- | Append a list of items
-listAppend' :: RedisList a b -> a -> [ b ] -> Redis ()
-listAppend' = addItem True
-
--- | Prepend a list of items
-listPrepend' :: RedisList a b -> a -> [ b ] -> Redis ()
-listPrepend' = addItem False
+-- | Prepend items to the front of a list
+lprepend :: RedisList a b -> a -> [ b ] -> Redis ()
+lprepend = addItem False
 
 addItem :: Bool -> RedisList a b -> a -> [ b ] -> Redis ()
 addItem toTheEnd p@(RList (E _ e _) maxLength) k bs = case bs of
@@ -61,11 +51,11 @@ addItem toTheEnd p@(RList (E _ e _) maxLength) k bs = case bs of
          Nothing -> pure ()
 
 -- | Remove an item from the list. This will respect the encoded equality, which may not (but usually does) coincide with the Haskell Eq instance.
-listRemove :: RedisList a b -> a -> b -> Redis ()
-listRemove p@(RList (E _ e _) _) k =
-  ignore . unwrap . lrem (primKey p k) 0 . runIdentity . e
+lrem :: RedisList a b -> a -> b -> Redis ()
+lrem p@(RList (E _ e _) _) k =
+  ignore . unwrap . Redis.lrem (primKey p k) 0 . runIdentity . e
 
 -- | Retrieve the length of a list
-listLength :: RedisList a b -> a  -> Redis Integer
-listLength p = unwrap . llen . primKey p
+llen :: RedisList a b -> a  -> Redis Integer
+llen p = unwrap . Redis.llen . primKey p
 

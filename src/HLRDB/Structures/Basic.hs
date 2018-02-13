@@ -1,4 +1,4 @@
--- | Basic storage is simply a key-value lookup in Redis. Multiple lookups can be combined into a single query via aggregation. Use liftq to lift a path to a query, then combine queries using the combinators in Aggregate, and reify them back into the Redis monad with @mget@.
+-- | Basic storage is simply a key-value lookup in Redis.
 
 module HLRDB.Structures.Basic where
 
@@ -8,7 +8,7 @@ import HLRDB.Components.RedisPrimitives
 import HLRDB.Util
 import Data.ByteString.Char8 (pack)
 
--- | Simple get command
+-- | Simple get command. Works on @RedisBasic a b@ and @RedisIntegral a b@.
 get :: RedisStructure (BASIC w) a b -> a -> Redis b
 get (RKeyValue (E k _ d)) a = Redis.get (k a) >>= \case
   Left e -> fail (show e)
@@ -17,12 +17,12 @@ get (RKeyValueInteger k _ d) a = Redis.get (k a) >>= \case
   Left e -> fail (show e)
   Right r -> pure $ d . fromIntegral $ decodeMInteger r
 
--- | Construct an @mget@ query. You may combine many of these together to create complex queries. Use @mget@ to execute the query back in the Redis monad.
+-- | Construct an @mget@ query. You may combine many of these together to create complex queries. Use @mget@ to execute the query back in the Redis monad. Works on @RedisBasic a b@ and @RedisIntegral a b@.
 liftq :: RedisStructure (BASIC w) a b -> a ⟿ b
 liftq (RKeyValue (E k _ d)) = T $ \f -> fmap d . f . k
 liftq (RKeyValueInteger k _ d) = T $ \f -> fmap (d . fromIntegral . decodeMInteger) . f . k
 
--- | Set a value for a given key
+-- | Set a value for a given key. Works on @RedisBasic a b@ and @RedisIntegral a b@.
 set :: RedisStructure (BASIC w) a b -> a -> b -> Redis ()
 set (RKeyValue (E k e _)) a b = case e b of
   Just bs -> ignore $ Redis.set (k a) bs
@@ -36,18 +36,18 @@ set' (RKeyValue (E k e _)) a b = case e (Just b) of
   Nothing -> ignore $ del [ k a ]
 
 -- | Increment an Integer in Redis. Empty values are treated as 0.
-incrKey :: RedisIntegral a b -> a -> Redis b
-incrKey (RKeyValueInteger p _ d) = fmap d . unwrap . incr . p
+incr :: RedisIntegral a b -> a -> Redis b
+incr (RKeyValueInteger p _ d) = fmap d . unwrap . Redis.incr . p
 
 -- | Increment an Integer in Redis by a specific amount. Empty values are treated as 0.
-incrKeyBy :: RedisIntegral a b -> a -> b -> Redis b
-incrKeyBy (RKeyValueInteger p e d) k = fmap d . (unwrap . incrby (p k)) . e
+incrby :: RedisIntegral a b -> a -> b -> Redis b
+incrby (RKeyValueInteger p e d) k = fmap d . (unwrap . Redis.incrby (p k)) . e
 
 -- | Decrement an Integer in Redis. Empty values are treated as 0.
-decrKey :: RedisIntegral a b -> a -> Redis b
-decrKey (RKeyValueInteger p _ d) = fmap d . unwrap . decr . p
+decr :: RedisIntegral a b -> a -> Redis b
+decr (RKeyValueInteger p _ d) = fmap d . unwrap . Redis.decr . p
 
 -- | Decrement an Integer in Redis by a specific amount. Empty values are treated as 0.
-decrKeyBy :: RedisIntegral a b -> a -> b -> Redis b
-decrKeyBy (RKeyValueInteger p e d) k = fmap d . unwrap . decrby (p k) . e
+decrby :: RedisIntegral a b -> a -> b -> Redis b
+decrby (RKeyValueInteger p e d) k = fmap d . unwrap . Redis.decrby (p k) . e
 
