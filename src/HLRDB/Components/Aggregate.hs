@@ -6,6 +6,7 @@ module HLRDB.Components.Aggregate
        , type (⟿)
        , type Query
        , aggregatePair
+       , remember
        , mget
        ) where
 
@@ -34,6 +35,12 @@ instance Applicative (T x y a) where
 aggregatePair :: T x y a b -> T x y c d -> T x y (a,c) (b,d)
 aggregatePair (T f) (T g) = T $ \h (a,c) ->
   (,) <$> f h a <*> g h c
+
+-- Remember could probably be a Profunctor typeclass in general (is it?)
+-- | And we can remember the lookup
+remember :: T x y a b -> T x y a (a , b)
+remember (T f) = T $ \x a -> (,) a <$> f x a
+
 
 instance Strong (T x y) where
   first' = firstTraversing

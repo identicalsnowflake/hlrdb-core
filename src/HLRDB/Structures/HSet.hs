@@ -25,7 +25,7 @@ hget :: RedisHSet a s b -> a -> s -> Redis (Maybe b)
 hget p@(RHSet (E _ _ d) (HSET e _)) k =
   (fmap . fmap) (d . pure) . unwrap . Redis.hget (primKey p k) . e
 
--- | Lookup via key and subkeys, pairing each given key with the lookup result
+-- | Lookup via key and subkeys, pairing each given subkey with the lookup result
 hmget :: Traversable t => RedisHSet a s b -> a -> t s -> Redis (t (s , Maybe b))
 hmget p@(RHSet (E _ _ d) (HSET e _)) k t = do
   let f = (fmap . fmap . fmap) (d . pure) . unwrap . Redis.hmget (primKey p k) . fmap e
