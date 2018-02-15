@@ -34,6 +34,7 @@ library
     , hashable >= 1.2.6.1
     , hedis >= 0.9.12
     , lens >= 4.15.4
+    , mtl >= 2.2.1
     , profunctors >= 5.2.1
     , random >= 1.1
     , unordered-containers >= 0.2.8.0
@@ -44,6 +45,7 @@ library
     , DataKinds
     , DeriveGeneric
     , DeriveTraversable
+    , FlexibleContexts
     , GADTs
     , LambdaCase
     , OverloadedStrings
