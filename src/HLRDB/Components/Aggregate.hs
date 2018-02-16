@@ -7,15 +7,13 @@ module HLRDB.Components.Aggregate
        , type Query
        , aggregatePair
        , remember
-       , mget
+       , runT
        ) where
 
 import Data.Profunctor
 import Data.Profunctor.Traversing
 import Control.Lens hiding (Traversing)
 import Data.ByteString
-import Database.Redis hiding (mget)
-import qualified Database.Redis
 
 -- | Abstract representation for aggregation.
 newtype T x y a b = T (Traversal a b x y) deriving (Functor)
@@ -58,15 +56,4 @@ type (⟿) a b = T ByteString (Maybe ByteString) a b
 
 -- | Non-infix alias of ⟿
 type Query a b = a ⟿ b
-
--- | Reify a (⟿) query into the Redis monad via a single mget command
-{-# INLINE mget #-}
-mget :: a ⟿ b -> a -> Redis b
-mget = runT mget'
-  where
-    mget' :: [ByteString] -> Redis [Maybe ByteString]
-    mget' [] = pure []
-    mget' xs = Database.Redis.mget xs >>= \case
-      Left e -> fail (show e)
-      Right vs -> pure vs
 

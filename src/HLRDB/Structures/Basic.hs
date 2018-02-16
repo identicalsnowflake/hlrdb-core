@@ -22,6 +22,15 @@ liftq :: RedisStructure (BASIC w) a b -> a ⟿ b
 liftq (RKeyValue (E k _ d)) = T $ \f -> fmap d . f . k
 liftq (RKeyValueInteger k _ d) = T $ \f -> fmap (d . fromIntegral . decodeMInteger) . f . k
 
+-- | Reify a (⟿) query into the Redis monad via a single mget command
+mget :: a ⟿ b -> a -> Redis b
+mget = runT mget'
+  where
+    mget' [] = pure []
+    mget' xs = Redis.mget xs >>= \case
+      Left e -> fail (show e)
+      Right vs -> pure vs
+
 -- | Set a value for a given key. Works on @RedisBasic a b@ and @RedisIntegral a b@.
 set :: RedisStructure (BASIC w) a b -> a -> b -> Redis ()
 set (RKeyValue (E k e _)) a b = case e b of
