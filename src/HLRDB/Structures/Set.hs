@@ -12,31 +12,31 @@ import HLRDB.Util
 
 
 -- | Retrieve the elements of a set from Redis
-setMembers :: (Eq b, Hashable b) => RedisSet a b -> a -> Redis (HashSet b)
-setMembers p@(RSet (E _ _ d)) =
-  fmap (S.fromList . fmap (d . pure)) . unwrap . smembers . primKey p
+smembers :: (Eq b, Hashable b) => RedisSet a b -> a -> Redis (HashSet b)
+smembers p@(RSet (E _ _ d)) =
+  fmap (S.fromList . fmap (d . pure)) . unwrap . Redis.smembers . primKey p
 
 -- | Test if an item is a member of a set
-setIsMember :: RedisSet a b -> a -> b -> Redis Bool
-setIsMember p@(RSet (E _ e _)) k =
-  unwrap . sismember (primKey p k) . runIdentity . e
+sismember :: RedisSet a b -> a -> b -> Redis Bool
+sismember p@(RSet (E _ e _)) k =
+  unwrap . Redis.sismember (primKey p k) . runIdentity . e
 
 -- | Add items to a set
-setInsert :: (Traversable t) => RedisSet a b -> a -> t b -> Redis ()
-setInsert p@(RSet (E _ e _)) k =
-  fixEmpty (ignore . unwrap . sadd (primKey p k)) (runIdentity . e)
+sadd :: (Traversable t) => RedisSet a b -> a -> t b -> Redis ()
+sadd p@(RSet (E _ e _)) k =
+  fixEmpty (ignore . unwrap . Redis.sadd (primKey p k)) (runIdentity . e)
 
 -- | Remove items from a set
-setRemove :: (Traversable t) => RedisSet a b -> a -> t b -> Redis ()
-setRemove p@(RSet (E _ e _)) k =
-  fixEmpty (ignore . unwrap . srem (primKey p k)) (runIdentity . e)
+srem :: (Traversable t) => RedisSet a b -> a -> t b -> Redis ()
+srem p@(RSet (E _ e _)) k =
+  fixEmpty (ignore . unwrap . Redis.srem (primKey p k)) (runIdentity . e)
 
 -- | Retrieve the cardinality of a set
-setCardinality :: RedisSet a b -> a -> Redis Integer
-setCardinality p = unwrap . scard . primKey p
+scard :: RedisSet a b -> a -> Redis Integer
+scard p = unwrap . Redis.scard . primKey p
 
 -- | Retrieve a random element from a set
-setRandom :: RedisSet a b -> a -> Redis (Maybe b)
-setRandom p@(RSet (E _ _ d)) =
-  (fmap . fmap) (d . pure) . unwrap . srandmember . primKey p
+srandmember :: RedisSet a b -> a -> Redis (Maybe b)
+srandmember p@(RSet (E _ _ d)) =
+  (fmap . fmap) (d . pure) . unwrap . Redis.srandmember . primKey p
 
