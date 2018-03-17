@@ -1,6 +1,7 @@
 module HLRDB.Util
        (
-         primKey
+         probIO
+       , primKey
        , unwrap
        , unwrapCreatedBool
        , unwrapCreated
@@ -20,6 +21,18 @@ import HLRDB.Components.RedisPrimitives
 import qualified Data.ByteString as S
 import qualified Data.ByteString.Unsafe as B
 import GHC.Int
+import Control.Monad.IO.Class
+import System.Random (randomRIO)
+
+
+probIO :: (MonadIO m) => Double -> m a -> m (Maybe a)
+probIO pr a =
+  if pr >= 1.0 then Just <$> a else do
+    r :: Double <- liftIO $ randomRIO (0, 1.0)
+    if r <= pr
+       then Just <$> a
+       else return Nothing
+
 
 {-# INLINE primKey #-}
 primKey :: RedisStructure v a b -> a -> ByteString

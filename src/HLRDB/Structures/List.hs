@@ -17,13 +17,11 @@ module HLRDB.Structures.List
 import Data.Functor.Identity
 import Database.Redis as Redis
 import HLRDB.Components.RedisPrimitives
-import HLRDB.Components.Indexes
 import HLRDB.Util
 
-
--- | Retrieve a range of elements, common Indexes include @fullIndex@, @firstIndex@, and @fromTo 0 10@
-lrange :: RedisList a b -> a -> Indexes -> Redis [ b ]
-lrange p@(RList (E _ _ d) _) k (Indexes (i,j)) =
+-- | Retrieve a range of elements. Endpoints are inclusive, just as with Haskell's [ 1 .. 5 ] notation.
+lrange :: RedisList a b -> a -> Integer -> Integer -> Redis [ b ]
+lrange p@(RList (E _ _ d) _) k i j =
   fmap (d . pure) <$> unwrap (Redis.lrange (primKey p k) i j)
 
 -- | Append items to the end of a list
@@ -35,14 +33,14 @@ lprepend :: RedisList a b -> a -> [ b ] -> Redis ()
 lprepend = addItem False
 
 addItem :: Bool -> RedisList a b -> a -> [ b ] -> Redis ()
-addItem toTheEnd p@(RList (E _ e _) maxLength) k bs = case bs of
+addItem toTheEnd p@(RList (E _ e _) trimScheme) k bs = case bs of
   [] -> pure ()
   _ -> do
        let method = if toTheEnd then rpush else lpush
        let key = primKey p k
        itemCount <- unwrap $ method key (fmap (runIdentity . e) bs)
-       case maxLength of
-         Just maxItemCount ->
+       case trimScheme of
+         Just (maxItemCount , prob) -> fmap (const ()) $ probIO prob $
            if itemCount > maxItemCount
               then ignore $ if toTheEnd
                    then unwrap $ ltrim key (fromIntegral $ length bs) (-1)

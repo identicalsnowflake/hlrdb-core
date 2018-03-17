@@ -25,15 +25,8 @@ data SORTEDSET
 
 -- | MaxLength is optionally used to specify automatic trimming on Lists
 type MaxLength = Integer
--- | Unlike lists, sorted sets in Redis do not return their cardinality when adding
--- elements, which means there is no efficient way to immediately know if the sset
--- exceeds the desired maximum cardinality. The conservative solution is to simply trim
--- the sset after every such operation, but because this is inefficient,
--- you may alternatively provide a `p : Probability`, which will only trim
--- the list with probability p when adding elements. For example, p = 0.1
--- will trim the list on average 1 time for every 10 elements inserted (at the expense of
--- the sset sometimes containing a few more elements than the specified max cardinality).
-type SortedSetTrimScheme = (MaxLength, Maybe Probability)
+-- | For lists and sorted sets, you may optionally provide a TrimScheme, which entails a desired cardinality as well as a probability that content will be trimmed to this cardinality when new data is inserted.
+type TrimScheme = (MaxLength, Probability)
 -- | The probability that a trim will occur when adding an item
 type Probability = Double
 
@@ -43,10 +36,10 @@ data RedisStructure t a b where
   -- Do not allow specifying an encoding for Integer, since Redis commands like incr
   -- demand that *only* the standard encoding is used, e.g., 123 -> "123"
   RKeyValueInteger :: (a -> ByteString) -> (b -> Integer) -> (Integer -> b) -> RedisStructure (BASIC Integer) a b
-  RList :: RE a b -> Maybe Integer -> RedisStructure LIST a b
+  RList :: RE a b -> Maybe TrimScheme -> RedisStructure LIST a b
   RHSet :: RE a b -> HSET v -> RedisStructure (HSET v) a b
   RSet :: RE a b -> RedisStructure SET a b
-  RSortedSet :: RE a b -> Maybe SortedSetTrimScheme -> RedisStructure SORTEDSET a b
+  RSortedSet :: RE a b -> Maybe TrimScheme -> RedisStructure SORTEDSET a b
 
 -- | Alias for simple key-value storage
 type RedisBasic k v = RedisStructure (BASIC ()) k v

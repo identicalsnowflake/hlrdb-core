@@ -20,7 +20,6 @@ library
   exposed-modules:
       HLRDB.Core
     , HLRDB.Components.Aggregate
-    , HLRDB.Components.Indexes
     , HLRDB.Components.RedisPrimitives
     , HLRDB.Structures.Basic
     , HLRDB.Structures.HSet

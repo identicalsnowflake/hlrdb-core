@@ -18,29 +18,24 @@ module HLRDB.Structures.SSet
 
 import Data.Functor.Identity
 import Control.Lens
-import Control.Monad.IO.Class
 import Data.Maybe (isJust)
 import Database.Redis as Redis
-import System.Random
-import HLRDB.Components.Indexes
 import HLRDB.Components.RedisPrimitives
 import HLRDB.Util
 
+trimInternal :: RedisSSet a b -> a -> Integer -> Redis ()
+trimInternal p k limit =
+  ignore $ unwrap $ zremrangebyrank (primKey p k) 0 ((limit * (-1)) - 1)
 
 trimSortedSet :: RedisSSet a b -> a -> Integer -> Redis ()
 trimSortedSet (RSortedSet _ Nothing) _ _ = pure ()
 trimSortedSet _ _ 0 = pure ()
+trimSortedSet p@(RSortedSet _ (Just (limit, 1.0))) k _ =
+  trimInternal p k limit
 trimSortedSet p@(RSortedSet _ (Just (limit, basep))) k count =
-  let probability = 1.0 - (1.0 - maybe 1.0 id basep) ^ count in
-  ignore $ performActionWithProbability probability
-    $ unwrap $ zremrangebyrank (primKey p k) 0 ((limit * (-1)) - 1)
-  where
-    performActionWithProbability :: (MonadIO m) => Double -> m a -> m (Maybe a)
-    performActionWithProbability pr a = do
-      r :: Double <- liftIO $ randomRIO (0, 1.0)
-      if r <= pr
-         then Just <$> a
-         else return Nothing
+  let probability = 1.0 - (1.0 - basep) ^ count in
+  ignore $ probIO probability $ trimInternal p k limit
+
 
 -- | Read the scores from Redis, apply the given trasformation, and write the resulting data
 zupdate :: RedisSSet a b -> a -> (Double -> Double) -> Redis ()
@@ -48,14 +43,14 @@ zupdate p k f = let key = primKey p k in
   unwrap (zrangeWithscores key 0 (-1)) >>=
   fixEmpty (ignore . unwrap . Redis.zadd key . fmap (\(bs,s) -> (f s , bs))) id
 
--- | Retrieve the given range of best-performing elements, e.g., fromTo 1 5 are the 5 best performers
-zbest :: RedisSSet a b -> a -> Indexes -> Redis [ b ]
-zbest p@(RSortedSet (E _ _ d) _) k (Indexes (s , e)) =
+-- | Retrieve the given range of best-performing elements. Range is inclusive, just as with Haskell's [ 1 .. 5 ] notation.
+zbest :: RedisSSet a b -> a -> Integer -> Integer -> Redis [ b ]
+zbest p@(RSortedSet (E _ _ d) _) k s e =
   fmap (d . pure) <$> unwrap (zrange (primKey p k) s e)
 
--- | Retrieve the given range of worst-performing elements, e.g., fromTo 1 5 are the 5 worst performers
-zworst :: RedisSSet a b -> a -> Indexes -> Redis [ b ]
-zworst p@(RSortedSet (E _ _ d) _) k (Indexes (s , e)) =
+-- | Retrieve the given range of worst-performing elements. Range is inclusive, just as with Haskell's [ 1 .. 5 ] notation.
+zworst :: RedisSSet a b -> a -> Integer -> Integer -> Redis [ b ]
+zworst p@(RSortedSet (E _ _ d) _) k s e =
   fmap (d . pure) <$> unwrap (zrevrange (primKey p k) s e)
 
 -- | Test if an object is a member of the set. Note that this uses the *encoded* equality, which may not (but typically does) coincide with the Haskell Eq instance.

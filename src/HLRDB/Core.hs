@@ -5,7 +5,6 @@
 module HLRDB.Core
        (
          module HLRDB.Components.Aggregate
-       , module HLRDB.Components.Indexes
        , module HLRDB.Components.RedisPrimitives
        
        , module HLRDB.Structures.Basic
@@ -20,7 +19,6 @@ module HLRDB.Core
 import Database.Redis
 
 import HLRDB.Components.Aggregate
-import HLRDB.Components.Indexes
 import HLRDB.Components.RedisPrimitives
 
 import HLRDB.Structures.Basic
