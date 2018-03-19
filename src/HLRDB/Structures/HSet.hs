@@ -62,3 +62,9 @@ hsetnx :: RedisHSet a s b -> a -> s -> b -> Redis (ActionPerformed Creation)
 hsetnx p@(RHSet (E _ eb _) (HSET e _)) k s =
   unwrapCreatedBool . Redis.hsetnx (primKey p k) (e s) . runIdentity . eb
 
+-- | Use a cursor to iterate a collection
+hscan :: RedisHSet a s b -> a -> Cursor -> Redis (Maybe Cursor , [ (s , b) ])
+hscan p@(RHSet (E _ _ d) (HSET _ d')) k =
+  let f (a,b) = (d' a , d (pure b)) in
+  unwrapCursor (fmap f) . Redis.hscan (primKey p k)
+

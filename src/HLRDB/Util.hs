@@ -1,8 +1,11 @@
+-- | Internal module. Not intended for public use.
+
 module HLRDB.Util
        (
          probIO
        , primKey
        , unwrap
+       , unwrapCursor
        , unwrapCreatedBool
        , unwrapCreated
        , unwrapDeleted
@@ -55,6 +58,13 @@ unwrap r = do
   case res of
     Left e -> failRedis e
     Right i -> return i
+
+{-# INLINE unwrapCursor #-}
+unwrapCursor :: (a -> b) -> Redis (Either Reply (Cursor , a)) -> Redis (Maybe Cursor , b)
+unwrapCursor f =
+  let g (c , x) = (if c == cursor0 then Nothing else Just c , f x) in
+  fmap g . unwrap
+
 
 {-# INLINE unwrapCreatedBool #-}
 unwrapCreatedBool :: Redis (Either Reply Bool) -> Redis (ActionPerformed Creation)

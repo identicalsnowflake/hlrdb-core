@@ -17,12 +17,12 @@ get (RKeyValueInteger k _ d) a = Redis.get (k a) >>= \case
   Left e -> fail (show e)
   Right r -> pure $ d . fromIntegral $ decodeMInteger r
 
--- | Construct an @mget@ query. You may combine many of these together to create complex queries. Use @mget@ to execute the query back in the Redis monad. Works on @RedisBasic a b@ and @RedisIntegral a b@.
+-- | Construct a query to be used with @mget@. You may combine many of these together to create complex queries. Use @mget@ to execute the query back in the Redis monad. Works on @RedisBasic a b@ and @RedisIntegral a b@.
 liftq :: RedisStructure (BASIC w) a b -> a ⟿ b
 liftq (RKeyValue (E k _ d)) = T $ \f -> fmap d . f . k
 liftq (RKeyValueInteger k _ d) = T $ \f -> fmap (d . fromIntegral . decodeMInteger) . f . k
 
--- | Reify a (⟿) query into the Redis monad via a single mget command
+-- | Reify a (⟿) query into the Redis monad via a single mget command.
 mget :: a ⟿ b -> a -> Redis b
 mget = runT mget'
   where

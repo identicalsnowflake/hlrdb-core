@@ -46,6 +46,7 @@ instance Strong (T x y) where
 instance Choice (T x y) where
   left' = leftTraversing
 
+-- | Reify aggregation into a target functor.
 {-# INLINE runT #-}
 runT :: (Functor f) => ([x] -> f [y]) -> T x y a b -> a -> f b
 runT i (T t) = unsafePartsOf t i

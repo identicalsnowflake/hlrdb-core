@@ -40,3 +40,8 @@ srandmember :: RedisSet a b -> a -> Redis (Maybe b)
 srandmember p@(RSet (E _ _ d)) =
   (fmap . fmap) (d . pure) . unwrap . Redis.srandmember . primKey p
 
+-- | Use a cursor to iterate a collection
+sscan :: RedisSet a b -> a -> Cursor -> Redis (Maybe Cursor , [ b ])
+sscan p@(RSet (E _ _ d)) k =
+  unwrapCursor (fmap (d . pure)) . Redis.sscan (primKey p k)
+

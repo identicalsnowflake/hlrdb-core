@@ -8,15 +8,22 @@ module HLRDB.Core
        , module HLRDB.Components.RedisPrimitives
        
        , module HLRDB.Structures.Basic
-       , module HLRDB.Structures.List
        , module HLRDB.Structures.HSet
        , module HLRDB.Structures.Set
        , module HLRDB.Structures.SSet
+       
+       , lrange
+       , lprepend
+       , lappend
+       , lpop
+       , lrem
+       , llen
 
        , Redis
+       , cursor0
        ) where
 
-import Database.Redis
+import Database.Redis (Redis,cursor0)
 
 import HLRDB.Components.Aggregate
 import HLRDB.Components.RedisPrimitives
