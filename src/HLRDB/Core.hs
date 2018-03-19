@@ -20,10 +20,11 @@ module HLRDB.Core
        , llen
 
        , Redis
+       , Cursor
        , cursor0
        ) where
 
-import Database.Redis (Redis,cursor0)
+import Database.Redis (Redis,Cursor,cursor0)
 
 import HLRDB.Components.Aggregate
 import HLRDB.Components.RedisPrimitives
