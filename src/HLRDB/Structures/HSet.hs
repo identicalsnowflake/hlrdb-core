@@ -5,7 +5,7 @@ module HLRDB.Structures.HSet where
 import Data.Functor.Identity
 import Database.Redis as Redis
 import HLRDB.Components.RedisPrimitives
-import HLRDB.Util
+import HLRDB.Internal
 import Control.Monad.State
 
 -- I wanted to only have the list get/set commands, but ultimately

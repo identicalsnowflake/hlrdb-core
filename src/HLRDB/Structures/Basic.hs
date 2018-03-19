@@ -5,7 +5,7 @@ module HLRDB.Structures.Basic where
 import Database.Redis as Redis
 import HLRDB.Components.Aggregate
 import HLRDB.Components.RedisPrimitives
-import HLRDB.Util
+import HLRDB.Internal
 import Data.ByteString.Char8 (pack)
 
 -- | Simple get command. Works on @RedisBasic a b@ and @RedisIntegral a b@.

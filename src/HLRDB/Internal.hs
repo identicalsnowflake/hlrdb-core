@@ -1,6 +1,6 @@
 -- | Internal module. Not intended for public use.
 
-module HLRDB.Util
+module HLRDB.Internal
        (
          probIO
        , primKey

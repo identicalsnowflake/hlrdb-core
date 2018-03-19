@@ -8,7 +8,7 @@ import Data.Hashable
 import Data.HashSet as S
 import Database.Redis as Redis
 import HLRDB.Components.RedisPrimitives
-import HLRDB.Util
+import HLRDB.Internal
 
 
 -- | Retrieve the elements of a set from Redis

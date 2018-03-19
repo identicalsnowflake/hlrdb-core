@@ -24,7 +24,8 @@ import Control.Lens
 import Data.Maybe (isJust)
 import Database.Redis as Redis
 import HLRDB.Components.RedisPrimitives
-import HLRDB.Util
+import HLRDB.Internal
+
 
 trimInternal :: RedisSSet a b -> a -> Integer -> Redis ()
 trimInternal p k limit =

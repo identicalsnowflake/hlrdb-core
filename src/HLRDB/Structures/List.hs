@@ -13,7 +13,8 @@ module HLRDB.Structures.List
        , HLRDB.Structures.List.lpop
        , HLRDB.Structures.List.lrem
        , HLRDB.Structures.List.llen
-       -- weird stuff, not re-exported in Core
+       -- * Other commands
+       -- | The following commands are available in Redis, but are recommended to use only with caution, due to their behavior being either "unhaskell-ey" or downright exotic.
        , HLRDB.Structures.List.rpop
        , HLRDB.Structures.List.rpoplpush
        , HLRDB.Structures.List.blpop
@@ -24,7 +25,7 @@ module HLRDB.Structures.List
 import Data.Functor.Identity
 import Database.Redis as Redis
 import HLRDB.Components.RedisPrimitives
-import HLRDB.Util
+import HLRDB.Internal
 import Data.Maybe (fromJust)
 
 
@@ -72,9 +73,6 @@ llen p = unwrap . Redis.llen . primKey p
 lpop :: RedisList a b -> a -> Redis (Maybe b)
 lpop p@(RList (E _ _ d) _) =
   (fmap . fmap) (d . pure) . unwrap . Redis.lpop . primKey p
-
--- | The following commands are available in Redis, but are recommended to use only with caution, due to their behavior being either "unhaskell-ey" or downright exotic.
-
 
 -- | Remove and return an item from the end of the list.
 rpop :: RedisList a b -> a -> Redis (Maybe b)
