@@ -1,6 +1,6 @@
 -- | Combinators that can be used for aggregating independent queries. See my <https://identicalsnowflake.github.io/QueryAggregation.html article> about aggregating mget queries for more information.
 
-module HLRDB.Components.Aggregate
+module HLRDB.Primitives.Aggregate
        (
          T(..)
        , type (⟿)

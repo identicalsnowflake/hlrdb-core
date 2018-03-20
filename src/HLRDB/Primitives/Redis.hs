@@ -1,16 +1,18 @@
 -- | A model for categorizing Redis commands for their particular structures using a GADT.
 
-module HLRDB.Components.RedisPrimitives where
+module HLRDB.Primitives.Redis where
 
 import Data.Functor.Identity
 import Data.ByteString
 
--- | MaxLength specifies the desired maximum cardinality of a structure
-type MaxLength = Integer
--- | A number in the interval [ 0.0 , 1.0 ]
-type Probability = Double
--- | For lists and sorted sets, you may optionally provide a @TrimScheme@, which entails a desired cardinality as well as a probability that content will be trimmed to this cardinality when new data is inserted.
-type TrimScheme = (MaxLength, Probability)
+-- | List and SSet declarations allow you to provide a TrimScheme. When provided, HLRDB will automatically trim the structure to the desired cardinality whenever data is inserted.
+--
+-- For example, if you set a softCardinality of 100 and a trimProbability of 0.05, whenever a data insertion takes place that could bring the cardinality over 100, there will be a 5% chance that a trim command will also be executed. If you want a hard cardinality (to the extent that Redis provides any guarantees), simply set the probability to 1. If you do not want any automatic trimming, simply do not provide a TrimScheme.
+
+data TrimScheme = TrimScheme {
+    softCardinality :: Integer
+  , trimProbability :: Double
+  }
 
 -- | GADT declaring the major Redis data structures. For application-level logic, the simpler type aliases declared below should suffice.
 data RedisStructure t a b where

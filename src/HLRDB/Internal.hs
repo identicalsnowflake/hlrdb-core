@@ -16,11 +16,13 @@ module HLRDB.Internal
        , decodeMInteger
        , readInt
        , Int64
+       , runIdentity
        ) where
 
+import Data.Functor.Identity
 import Database.Redis
 import Data.ByteString hiding (foldr)
-import HLRDB.Components.RedisPrimitives
+import HLRDB.Primitives.Redis
 import qualified Data.ByteString as S
 import qualified Data.ByteString.Unsafe as B
 import GHC.Int
@@ -52,30 +54,30 @@ failRedis :: Reply -> Redis a
 failRedis = fail . (++) "Unexpected Redis response: " . show
 
 {-# INLINE unwrap #-}
-unwrap :: Redis (Either Reply a) -> Redis a
+unwrap :: MonadRedis m => Redis (Either Reply a) -> m a
 unwrap r = do
-  res <- r
+  res <- liftRedis r
   case res of
-    Left e -> failRedis e
+    Left e -> liftRedis $ failRedis e
     Right i -> return i
 
 {-# INLINE unwrapCursor #-}
-unwrapCursor :: (a -> b) -> Redis (Either Reply (Cursor , a)) -> Redis (Maybe Cursor , b)
+unwrapCursor :: MonadRedis m => (a -> b) -> Redis (Either Reply (Cursor , a)) -> m (Maybe Cursor , b)
 unwrapCursor f =
   let g (c , x) = (if c == cursor0 then Nothing else Just c , f x) in
   fmap g . unwrap
 
 
 {-# INLINE unwrapCreatedBool #-}
-unwrapCreatedBool :: Redis (Either Reply Bool) -> Redis (ActionPerformed Creation)
+unwrapCreatedBool :: MonadRedis m => Redis (Either Reply Bool) -> m (ActionPerformed Creation)
 unwrapCreatedBool = fmap (\b -> if b then FreshlyCreated 1 else FreshlyCreated 0) . unwrap
 
 {-# INLINE unwrapCreated #-}
-unwrapCreated :: Redis (Either Reply Integer) -> Redis (ActionPerformed Creation)
+unwrapCreated :: MonadRedis m => Redis (Either Reply Integer) -> m (ActionPerformed Creation)
 unwrapCreated = fmap FreshlyCreated . unwrap
 
 {-# INLINE unwrapDeleted #-}
-unwrapDeleted :: Redis (Either Reply Integer) -> Redis (ActionPerformed Deletion)
+unwrapDeleted :: MonadRedis m => Redis (Either Reply Integer) -> m (ActionPerformed Deletion)
 unwrapDeleted = fmap Deleted . unwrap
 
 {-# INLINE ignore #-}
@@ -84,16 +86,16 @@ ignore = fmap (const ())
 
 -- Redis does not treat treat zero cases properly, so use this to fix the algebra
 {-# INLINE fixEmpty #-}
-fixEmpty :: (Monoid m, Traversable t) => ([b] -> Redis m) -> (a -> b) -> t a -> Redis m
+fixEmpty :: (MonadRedis m , Monoid e, Traversable t) => ([ b ] -> Redis e) -> (a -> b) -> t a -> m e
 fixEmpty f e t = case foldr ((:) . e) [] t of
   [] -> pure mempty
-  xs -> f xs
+  xs -> liftRedis $ f xs
 
 {-# INLINE fixEmpty' #-}
-fixEmpty' :: (Traversable t, Integral i) => ([b] -> Redis i) -> (a -> b) -> t a -> Redis i
+fixEmpty' :: (MonadRedis m, Traversable t, Integral i) => ([ b ] -> Redis i) -> (a -> b) -> t a -> m i
 fixEmpty' f e t = case foldr ((:) . e) [] t of
   [] -> pure 0
-  xs -> f xs
+  xs -> liftRedis $ f xs
 
 {-# INLINE foldM #-}
 foldM :: (Foldable t) => (a -> b) -> t a -> [ b ]

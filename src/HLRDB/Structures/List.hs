@@ -22,27 +22,28 @@ module HLRDB.Structures.List
        , HLRDB.Structures.List.brpoplpush
        ) where
 
-import Data.Functor.Identity
 import Database.Redis as Redis
-import HLRDB.Components.RedisPrimitives
+import HLRDB.Primitives.Redis
 import HLRDB.Internal
 import Data.Maybe (fromJust)
 
 
 -- | Retrieve a range of elements. Endpoints are inclusive, just as with Haskell's [ 1 .. 5 ] notation.
-lrange :: RedisList a b -> a -> Integer -> Integer -> Redis [ b ]
-lrange p@(RList (E _ _ d) _) k i j =
-  fmap (d . pure) <$> unwrap (Redis.lrange (primKey p k) i j)
+lrange :: MonadRedis m => RedisList a b -> a -> Integer -> Integer -> m [ b ]
+lrange p@(RList (E _ _ d) _) k i =
+    (fmap . fmap) (d . pure)
+  . unwrap
+  . Redis.lrange (primKey p k) i
 
 -- | Append items to the end of a list
-lappend :: Traversable t => RedisList a b -> a -> t b -> Redis ()
+lappend :: (MonadRedis m , Traversable t) => RedisList a b -> a -> t b -> m ()
 lappend = addItem True
 
 -- | Prepend items to the front of a list
-lprepend :: Traversable t => RedisList a b -> a -> t b -> Redis ()
+lprepend :: (MonadRedis m , Traversable t) => RedisList a b -> a -> t b -> m ()
 lprepend = addItem False
 
-addItem :: Traversable t => Bool -> RedisList a b -> a -> t b -> Redis ()
+addItem :: (MonadRedis m , Traversable t) => Bool -> RedisList a b -> a -> t b -> m ()
 addItem toTheEnd p@(RList (E _ e _) trimScheme) k bs' =
   let bs = foldr (:) [] bs' in
   case bs of
@@ -52,7 +53,7 @@ addItem toTheEnd p@(RList (E _ e _) trimScheme) k bs' =
        let key = primKey p k
        itemCount <- unwrap $ method key (fmap (runIdentity . e) bs)
        case trimScheme of
-         Just (maxItemCount , prob) -> fmap (const ()) $ probIO prob $
+         Just (TrimScheme maxItemCount prob) -> fmap (const ()) $ liftRedis $ probIO prob $
            if itemCount > maxItemCount
               then ignore $ if toTheEnd
                    then unwrap $ ltrim key (fromIntegral $ length bs) (-1)
@@ -61,36 +62,54 @@ addItem toTheEnd p@(RList (E _ e _) trimScheme) k bs' =
          Nothing -> pure ()
 
 -- | Remove an item from the list. You should ensure that any Eq instance in Haskell respects the induced equality by your encoding scheme, as Redis will use the latter.
-lrem :: RedisList a b -> a -> b -> Redis ()
+lrem :: MonadRedis m => RedisList a b -> a -> b -> m ()
 lrem p@(RList (E _ e _) _) k =
-  ignore . unwrap . Redis.lrem (primKey p k) 0 . runIdentity . e
+    ignore
+  . unwrap
+  . Redis.lrem (primKey p k) 0
+  . runIdentity
+  . e
 
 -- | Retrieve the length of a list.
-llen :: RedisList a b -> a  -> Redis Integer
-llen p = unwrap . Redis.llen . primKey p
+llen :: MonadRedis m => RedisList a b -> a -> m Integer
+llen p =
+    unwrap
+  . Redis.llen
+  . primKey p
 
 -- | Remove and return an item from the head of the list.
-lpop :: RedisList a b -> a -> Redis (Maybe b)
+lpop :: MonadRedis m => RedisList a b -> a -> m (Maybe b)
 lpop p@(RList (E _ _ d) _) =
-  (fmap . fmap) (d . pure) . unwrap . Redis.lpop . primKey p
+    (fmap . fmap) (d . pure)
+  . unwrap
+  . Redis.lpop
+  . primKey p
 
 -- | Remove and return an item from the end of the list.
-rpop :: RedisList a b -> a -> Redis (Maybe b)
+rpop :: MonadRedis m => RedisList a b -> a -> m (Maybe b)
 rpop p@(RList (E _ _ d) _) =
-  (fmap . fmap) (d . pure) . unwrap . Redis.rpop . primKey p
+    (fmap . fmap) (d . pure)
+  . unwrap
+  . Redis.rpop
+  . primKey p
 
 -- | Remove and return an item from the first list and prepend it to the second list.
-rpoplpush :: RedisList a b -> a -> a -> Redis (Maybe b)
-rpoplpush p@(RList (E _ _ d) _) source dest =
-  (fmap . fmap) (d . pure) $ unwrap $ Redis.rpoplpush (primKey p source) (primKey p dest)
+rpoplpush :: MonadRedis m => RedisList a b -> a -> a -> m (Maybe b)
+rpoplpush p@(RList (E _ _ d) _) s =
+    (fmap . fmap) (d . pure)
+  . unwrap
+  . Redis.rpoplpush (primKey p s)
+  . primKey p
 
 -- | Blocking variant of rpoplpush
-brpoplpush :: RedisList a b -> a -> a -> Integer -> Redis (Maybe b)
-brpoplpush p@(RList (E _ _ d) _) source dest =
-  (fmap . fmap) (d . pure) . unwrap . Redis.brpoplpush (primKey p source) (primKey p dest)
+brpoplpush :: MonadRedis m => RedisList a b -> a -> a -> Integer -> m (Maybe b)
+brpoplpush p@(RList (E _ _ d) _) s e =
+    (fmap . fmap) (d . pure)
+  . unwrap
+  . Redis.brpoplpush (primKey p s) (primKey p e)
 
 -- | Pop the first available value from a set of lists; if none is available, block the connection (!) until either the specified timeout completes, returning nothing, or until a value becomes available, returning the value and the key of the list in which it was added, whichever happens first. If multiple clients are waiting for an item from the same list, the one who has been waiting the longest will be given the item. If no keys are given, the command returns immediately with Nothing.
-blpop :: Traversable t => RedisList a b -> t a -> Integer -> Redis (Maybe (a , b))
+blpop :: (MonadRedis m , Traversable t) => RedisList a b -> t a -> Integer -> m (Maybe (a , b))
 blpop p@(RList (E e _ d) _) ts t = case foldr (\x a -> (e x , x) : a) [] ts of
   [] -> pure Nothing
   xs ->
@@ -98,7 +117,7 @@ blpop p@(RList (E e _ d) _) ts t = case foldr (\x a -> (e x , x) : a) [] ts of
     (fmap . fmap . fmap) f unwrap $ Redis.blpop (primKey p . snd <$> xs) t
 
 -- | Similar to blpop, but popping from the right.
-brpop :: Traversable t => RedisList a b -> t a -> Integer -> Redis (Maybe (a , b))
+brpop :: (MonadRedis m , Traversable t) => RedisList a b -> t a -> Integer -> m (Maybe (a , b))
 brpop p@(RList (E e _ d) _) ts t = case foldr (\x a -> (e x , x) : a) [] ts of
   [] -> pure Nothing
   xs ->

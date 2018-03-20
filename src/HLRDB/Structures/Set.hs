@@ -3,45 +3,57 @@
 
 module HLRDB.Structures.Set where
 
-import Data.Functor.Identity
 import Data.Hashable
 import Data.HashSet as S
 import Database.Redis as Redis
-import HLRDB.Components.RedisPrimitives
+import HLRDB.Primitives.Redis
 import HLRDB.Internal
 
 
 -- | Retrieve the elements of a set from Redis
-smembers :: (Eq b, Hashable b) => RedisSet a b -> a -> Redis (HashSet b)
+smembers :: (MonadRedis m , Eq b , Hashable b) => RedisSet a b -> a -> m (HashSet b)
 smembers p@(RSet (E _ _ d)) =
-  fmap (S.fromList . fmap (d . pure)) . unwrap . Redis.smembers . primKey p
+    fmap (S.fromList . fmap (d . pure))
+  . unwrap
+  . Redis.smembers
+  . primKey p
 
 -- | Test if an item is a member of a set
-sismember :: RedisSet a b -> a -> b -> Redis Bool
+sismember :: MonadRedis m => RedisSet a b -> a -> b -> m Bool
 sismember p@(RSet (E _ e _)) k =
-  unwrap . Redis.sismember (primKey p k) . runIdentity . e
+    unwrap
+  . Redis.sismember (primKey p k)
+  . runIdentity
+  . e
 
 -- | Add items to a set
-sadd :: (Traversable t) => RedisSet a b -> a -> t b -> Redis ()
+sadd :: (MonadRedis m , Traversable t) => RedisSet a b -> a -> t b -> m ()
 sadd p@(RSet (E _ e _)) k =
   fixEmpty (ignore . unwrap . Redis.sadd (primKey p k)) (runIdentity . e)
 
 -- | Remove items from a set
-srem :: (Traversable t) => RedisSet a b -> a -> t b -> Redis ()
+srem :: (MonadRedis m , Traversable t) => RedisSet a b -> a -> t b -> m ()
 srem p@(RSet (E _ e _)) k =
   fixEmpty (ignore . unwrap . Redis.srem (primKey p k)) (runIdentity . e)
 
 -- | Retrieve the cardinality of a set
-scard :: RedisSet a b -> a -> Redis Integer
-scard p = unwrap . Redis.scard . primKey p
+scard :: MonadRedis m => RedisSet a b -> a -> m Integer
+scard p =
+    unwrap
+  . Redis.scard
+  . primKey p
 
 -- | Retrieve a random element from a set
-srandmember :: RedisSet a b -> a -> Redis (Maybe b)
+srandmember :: MonadRedis m => RedisSet a b -> a -> m (Maybe b)
 srandmember p@(RSet (E _ _ d)) =
-  (fmap . fmap) (d . pure) . unwrap . Redis.srandmember . primKey p
+    (fmap . fmap) (d . pure)
+  . unwrap
+  . Redis.srandmember
+  . primKey p
 
 -- | Use a cursor to iterate a collection
-sscan :: RedisSet a b -> a -> Cursor -> Redis (Maybe Cursor , [ b ])
+sscan :: MonadRedis m => RedisSet a b -> a -> Cursor -> m (Maybe Cursor , [ b ])
 sscan p@(RSet (E _ _ d)) k =
-  unwrapCursor (fmap (d . pure)) . Redis.sscan (primKey p k)
+    unwrapCursor (fmap (d . pure))
+  . Redis.sscan (primKey p k)
 
