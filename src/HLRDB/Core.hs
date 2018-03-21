@@ -6,14 +6,18 @@
 
 module HLRDB.Core
        (
-         module HLRDB.Primitives.Aggregate
-       , module HLRDB.Primitives.Redis
-       
-       , module HLRDB.Structures.Basic
-       , module HLRDB.Structures.HSet
-       , module HLRDB.Structures.Set
-       , module HLRDB.Structures.SSet
-       
+         -- * Basic
+         get
+       , liftq
+       , mget
+       , set
+       , set'
+       , incr
+       , incrby
+       , decr
+       , decrby
+
+         -- * List         
        , lrange
        , lprepend
        , lappend
@@ -21,12 +25,51 @@ module HLRDB.Core
        , lrem
        , llen
 
+         -- * HSet
+       , hgetall
+       , hget
+       , hmget
+       , hset
+       , hmset
+       , hdel
+       , hsetnx
+       , hscan
+
+         -- * Set
+       , smembers
+       , sismember
+       , sadd
+       , srem
+       , scard
+       , srandmember
+       , sscan
+
+         -- * SSet
+       , zadd
+       , zscore
+       , zupdate
+       , zbest
+       , zworst
+       , zmember
+       , zrank
+       , zrevrank
+       , zrem
+       , zincrby
+       , zcard
+       , zscan
+
          -- * Re-exports from hedis
        , Redis
        , MonadRedis
        , liftRedis
        , Cursor
        , cursor0
+
+         -- * HLRDB Primitive re-exports
+       
+       , module HLRDB.Primitives.Aggregate
+       , module HLRDB.Primitives.Redis
+       
        ) where
 
 import Database.Redis (Redis,MonadRedis,liftRedis,Cursor,cursor0)
