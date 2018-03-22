@@ -4,6 +4,7 @@ module HLRDB.Primitives.Aggregate
        (
          T(..)
        , type (⟿)
+       , type (~~>)
        , type Query
        , aggregatePair
        , remember
@@ -54,6 +55,9 @@ runT i (T t) = unsafePartsOf t i
 
 -- | A query using input of type 'a' and yielding an output of type 'b'
 type (⟿) a b = T ByteString (Maybe ByteString) a b
+
+-- | An ASCII version of ⟿
+type (~~>) a b = T ByteString (Maybe ByteString) a b
 
 -- | Non-infix alias of ⟿
 type Query a b = a ⟿ b
