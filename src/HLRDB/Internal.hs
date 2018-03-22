@@ -81,7 +81,7 @@ unwrapDeleted :: MonadRedis m => Redis (Either Reply Integer) -> m (ActionPerfor
 unwrapDeleted = fmap Deleted . unwrap
 
 {-# INLINE ignore #-}
-ignore :: (Functor f) => f a -> f ()
+ignore :: Functor f => f a -> f ()
 ignore = fmap (const ())
 
 -- Redis does not treat treat zero cases properly, so use this to fix the algebra

@@ -58,6 +58,11 @@ module HLRDB.Core
        , zcard
        , zscan
 
+         -- * Universal
+       , HLRDB.Core.del
+       , HLRDB.Core.expire
+       , HLRDB.Core.expireat
+       
          -- * Re-exports from hedis
        , Redis
        , MonadRedis
@@ -72,14 +77,36 @@ module HLRDB.Core
        
        ) where
 
-import Database.Redis (Redis,MonadRedis,liftRedis,Cursor,cursor0)
+import Data.Time
+import Data.Time.Clock.POSIX
+import Database.Redis (Redis,MonadRedis,liftRedis,Cursor,cursor0,del,expire,expireat)
 
 import HLRDB.Primitives.Aggregate
 import HLRDB.Primitives.Redis
-
+import HLRDB.Internal
 import HLRDB.Structures.Basic
 import HLRDB.Structures.List
 import HLRDB.Structures.HSet
 import HLRDB.Structures.Set
 import HLRDB.Structures.SSet
+
+-- | Delete all data for the given keys in Redis
+del :: (Traversable t , MonadRedis m) => RedisStructure v a b -> t a -> m (ActionPerformed Deletion)
+del p =
+    fmap Deleted
+  . fixEmpty' (unwrap . Database.Redis.del) (primKey p)
+
+-- | Expire after a given amount of time (in seconds)
+expire :: MonadRedis m => RedisStructure v a b -> a -> Integer -> m ()
+expire p k =
+  liftRedis . ignore . Database.Redis.expire (primKey p k)
+
+-- | Expire at a given timestamp
+expireat :: MonadRedis m => RedisStructure v a b -> a -> UTCTime -> m ()
+expireat p k =
+    liftRedis
+  . ignore
+  . Database.Redis.expireat (primKey p k)
+  . round
+  . utcTimeToPOSIXSeconds
 
