@@ -1,5 +1,5 @@
 name:                hlrdb-core
-version:             0.1.0.0
+version:             0.1.1.0
 synopsis:            High-level Redis Database Core API
 description:         A library for type-driven interaction with Redis
 license:             MIT
