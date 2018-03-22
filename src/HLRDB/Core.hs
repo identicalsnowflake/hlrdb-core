@@ -60,6 +60,7 @@ module HLRDB.Core
 
          -- * Universal
        , HLRDB.Core.del
+       , HLRDB.Core.persist
        , HLRDB.Core.expire
        , HLRDB.Core.expireat
        
@@ -79,7 +80,7 @@ module HLRDB.Core
 
 import Data.Time
 import Data.Time.Clock.POSIX
-import Database.Redis (Redis,MonadRedis,liftRedis,Cursor,cursor0,del,expire,expireat)
+import Database.Redis (Redis,MonadRedis,liftRedis,Cursor,cursor0,del,persist,expire,expireat)
 
 import HLRDB.Primitives.Aggregate
 import HLRDB.Primitives.Redis
@@ -96,16 +97,21 @@ del p =
     fmap Deleted
   . fixEmpty' (unwrap . Database.Redis.del) (primKey p)
 
--- | Expire after a given amount of time (in seconds)
-expire :: MonadRedis m => RedisStructure v a b -> a -> Integer -> m ()
-expire p k =
-  liftRedis . ignore . Database.Redis.expire (primKey p k)
+-- | Discard any pending expirations of this key. Returns True if the key both exists and had a timeout which was removed by the command.
+persist :: MonadRedis m => RedisStructure v a b -> a -> m Bool
+persist p =
+  liftRedis . unwrap . Database.Redis.persist . primKey p
 
--- | Expire at a given timestamp
-expireat :: MonadRedis m => RedisStructure v a b -> a -> UTCTime -> m ()
+-- | Expire after a given amount of time (in seconds). Returns True if the key existed and a timeout was set.
+expire :: MonadRedis m => RedisStructure v a b -> a -> Integer -> m Bool
+expire p k =
+  liftRedis . unwrap . Database.Redis.expire (primKey p k)
+
+-- | Expire at a given timestamp. Returns True if the key existed and a timeout was set.
+expireat :: MonadRedis m => RedisStructure v a b -> a -> UTCTime -> m Bool
 expireat p k =
     liftRedis
-  . ignore
+  . unwrap
   . Database.Redis.expireat (primKey p k)
   . round
   . utcTimeToPOSIXSeconds
