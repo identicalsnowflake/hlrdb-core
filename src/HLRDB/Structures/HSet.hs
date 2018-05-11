@@ -33,7 +33,7 @@ hget p@(RHSet (E _ _ d) (HSET e _)) k =
 -- | Lookup via key and subkeys, pairing each given subkey with the lookup result
 hmget :: (MonadRedis m , Traversable t) => RedisHSet a s b -> a -> t s -> m (t (s , Maybe b))
 hmget p@(RHSet (E _ _ d) (HSET e _)) k t = do
-  let f = (fmap . fmap . fmap) (d . pure) . unwrap . Redis.hmget (primKey p k) . fmap e
+  let f = (fmap . fmap . fmap) (d . pure) . fixEmpty (unwrap . Redis.hmget (primKey p k)) id . fmap e
   let xs = foldr (:) [] t
   reifyTraversal t <$> liftRedis (f xs)
   where
@@ -56,11 +56,7 @@ hset p@(RHSet (E _ eb _) (HSET e _)) k s =
 -- | Set via key and subkeys
 hmset :: (MonadRedis m , Traversable t) => RedisHSet a s b -> a -> t (s , b) -> m ()
 hmset p@(RHSet (E _ eb _) (HSET e _)) k =
-    liftRedis
-  . ignore
-  . Redis.hmset (primKey p k)
-  . foldr (\x a -> (e (fst x) , runIdentity (eb (snd x))) : a) []
-
+    fixEmpty (ignore . unwrap . Redis.hmset (primKey p k)) (\(s,b) -> (e s , runIdentity $ eb b))
 
 -- | Delete via key and subkeys
 hdel :: (MonadRedis m , Traversable t) => RedisHSet a s b -> a -> t s -> m (ActionPerformed Deletion)

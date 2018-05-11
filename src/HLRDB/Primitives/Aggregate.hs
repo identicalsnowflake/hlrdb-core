@@ -16,6 +16,7 @@ import Data.Profunctor.Traversing
 import Control.Lens hiding (Traversing)
 import Data.ByteString
 
+
 -- | Abstract representation for aggregation.
 newtype T x y a b = T (Traversal a b x y) deriving (Functor)
 
