@@ -17,6 +17,7 @@ module HLRDB.Structures.SSet
        , HLRDB.Structures.SSet.zincrby
        , HLRDB.Structures.SSet.zcard
        , HLRDB.Structures.SSet.zscan
+       , HLRDB.Structures.SSet.zrangebyscore
        ) where
 
 import Control.Lens
@@ -24,6 +25,7 @@ import Data.Maybe (isJust)
 import Database.Redis as Redis
 import HLRDB.Primitives.Redis
 import HLRDB.Internal
+import Data.ByteString.Char8 (ByteString, pack)
 
 
 trimInternal :: MonadRedis m => RedisSSet a b -> a -> Integer -> m ()
@@ -129,4 +131,27 @@ zscan p@(RSortedSet (E _ _ d) _) k =
   let f (x,s) = (d (pure x) , s) in
     unwrapCursor (fmap f)
   . Redis.zscan (primKey p k)
+
+-- | Retrieve items in a score range; final parameters are @min@, @max@, @offset@, and @limit@
+zrangebyscore :: MonadRedis m => RedisSSet a b -> a -> Maybe Double -> Maybe Double -> Maybe Integer -> Maybe Integer -> m [ (b , Double) ]
+zrangebyscore p@(RSortedSet (E _ _ d) _) k mmin mmax mo ml =
+    (fmap . fmap) (over _1 (d . Identity))
+  $ unwrap
+  $ req
+      (primKey p k)
+      (maybe "-inf" encode mmin)
+      (maybe "+inf" encode mmax)
+      (encode <$> mo)
+      (encode <$> ml)
+  where
+    encode :: Show a => a -> ByteString
+    encode = pack . show
+
+    req :: RedisCtx m f => ByteString -> ByteString -> ByteString -> Maybe ByteString -> Maybe ByteString-> m (f [ (ByteString , Double) ])
+    req ke mi ma Nothing Nothing =
+      sendRequest $ [ "ZRANGEBYSCORE", ke , mi , ma , "WITHSCORES" ]
+    req ke mi ma (Just off) mli =
+      sendRequest $ [ "ZRANGEBYSCORE", ke , mi , ma , "WITHSCORES" , "LIMIT", off , maybe (encode (maxBound :: Int64)) id mli ]
+    req ke mi ma Nothing (Just li) =
+      sendRequest $ [ "ZRANGEBYSCORE", ke , mi , ma , "WITHSCORES" , "LIMIT", "0" , li ]
 

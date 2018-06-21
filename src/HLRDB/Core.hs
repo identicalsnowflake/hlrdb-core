@@ -57,6 +57,7 @@ module HLRDB.Core
        , zincrby
        , zcard
        , zscan
+       , zrangebyscore
 
          -- * Universal
        , HLRDB.Core.del
@@ -90,6 +91,7 @@ import HLRDB.Structures.List
 import HLRDB.Structures.HSet
 import HLRDB.Structures.Set
 import HLRDB.Structures.SSet
+
 
 -- | Delete all data for the given keys in Redis
 del :: (Traversable t , MonadRedis m) => RedisStructure v a b -> t a -> m (ActionPerformed Deletion)
