@@ -32,9 +32,9 @@ instance Applicative (T x y a) where
 
 -- | We can merge any two arbitrary mget queries.
 {-# INLINE aggregatePair #-}
-aggregatePair :: T x y a b -> T x y c d -> T x y (a,c) (b,d)
-aggregatePair (T f) (T g) = T $ \h (a,c) ->
-  (,) <$> f h a <*> g h c
+aggregatePair :: (Traversing p , Functor (p (a , a')) , Applicative (p (a , a'))) => p a b -> p a' b' -> p (a , a') (b , b')
+aggregatePair x y =
+  (,) <$> lmap (view _1) x <*> lmap (view _2) y
 
 -- Remember could probably be a Profunctor typeclass in general (is it?)
 -- | And we can remember the lookup
