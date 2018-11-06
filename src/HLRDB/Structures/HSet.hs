@@ -41,9 +41,12 @@ hmget p@(RHSet (E _ _ d) (HSET e _)) k t = do
     reifyTraversal tr bs = evalState (traverse g tr) bs
       where
         g a = do
-          (b:bs') <- Control.Monad.State.get
-          put bs'
-          return (a,b)
+          xs <- Control.Monad.State.get
+          case xs of
+            [] -> error "Impossible in hmget: unexpected data size in HLRDB.Structures.HSet.hmget"
+            (b:bs') -> do
+              put bs'
+              return (a,b)
 
 -- | Set via key and subkey
 hset :: MonadRedis m => RedisHSet a s b -> a -> s -> b -> m (ActionPerformed Creation)
