@@ -69,6 +69,13 @@ mset = go . flip runMSET []
     mset' [] = pure undefined
     mset' xs = unwrap $ liftRedis $ Redis.mset xs
 
+-- | Set a value together with a given expiration timeout (in seconds).
+setex :: MonadRedis m => RedisStructure (BASIC w) a b -> a -> Integer -> b -> m ()
+setex (RKeyValue (E k e _)) a t b = liftRedis $ case e b of
+  Just bs -> ignore $ Redis.setex (k a) t bs
+  Nothing -> ignore $ del [ k a ]
+setex (RKeyValueInteger k e _) a t i = liftRedis $ ignore $ Redis.setex (k a) t (pack $ show (e i))
+
 -- | Increment an Integer in Redis. Empty values are treated as 0.
 incr :: MonadRedis m => RedisIntegral a b -> a -> m b
 incr (RKeyValueInteger p _ d) =
