@@ -7,6 +7,7 @@ import HLRDB.Primitives.Aggregate
 import HLRDB.Primitives.Redis
 import HLRDB.Internal
 import Data.ByteString.Char8 (pack)
+import qualified Data.HashMap.Strict as HM
 
 
 -- | Simple get command. Works on @RedisBasic a b@ and @RedisIntegral a b@.
@@ -44,6 +45,29 @@ set' :: MonadRedis m => RedisBasic a (Maybe b) -> a -> b -> m ()
 set' (RKeyValue (E k e _)) a b = liftRedis $ case e (Just b) of
   Just bs -> ignore $ Redis.set (k a) bs
   Nothing -> ignore $ del [ k a ]
+
+-- | Construct a query to be used with @mset@. The @MSET@ type is a @Monoid@, so you may combine many of these together before executing the batch with the @mset@ command.
+liftqs :: RedisStructure (BASIC w) a b -> (a , b) -> MSET
+liftqs (RKeyValue (E k e _)) (a , b) = MSET $ (<>) [ (k a , e b) ]
+liftqs (RKeyValueInteger k e _) (a , b) = MSET $ (<>) [ (k a , Just $ pack (show (e b))) ]
+
+-- | Execute a @MSET@ query.
+mset :: MonadRedis m => MSET -> m ()
+mset = go . flip runMSET []
+  where
+    -- need this hashmap to/from in order to make sure deleting a value after setting it
+    -- performs correctly.
+    go xs = case (splitWith f . HM.toList . HM.fromList) xs of
+      (as , bs) -> mdel' as >> mset' bs >> pure ()
+      where
+        f (x , Nothing) = Left x
+        f (x , Just y) = Right (x , y)
+
+    mdel' [] = pure 0
+    mdel' xs = unwrap $ liftRedis $ Redis.del xs
+    
+    mset' [] = pure undefined
+    mset' xs = unwrap $ liftRedis $ Redis.mset xs
 
 -- | Increment an Integer in Redis. Empty values are treated as 0.
 incr :: MonadRedis m => RedisIntegral a b -> a -> m b

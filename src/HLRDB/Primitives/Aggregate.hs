@@ -9,12 +9,16 @@ module HLRDB.Primitives.Aggregate
        , aggregatePair
        , remember
        , runT
+
+       -- | Aggregate, atomic multi-set query (as in setting multiple things in a single query)
+       , MSET
        ) where
 
 import Data.Profunctor
 import Data.Profunctor.Traversing
 import Control.Lens hiding (Traversing)
 import Data.ByteString
+import HLRDB.Internal (MSET)
 
 
 -- | Abstract representation for aggregation.
@@ -50,7 +54,7 @@ instance Choice (T x y) where
 
 -- | Reify aggregation into a target functor.
 {-# INLINE runT #-}
-runT :: (Functor f) => ([x] -> f [y]) -> T x y a b -> a -> f b
+runT :: Functor f => ([x] -> f [y]) -> T x y a b -> a -> f b
 runT i (T t) = unsafePartsOf t i
 
 

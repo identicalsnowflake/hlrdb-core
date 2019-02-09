@@ -17,6 +17,8 @@ module HLRDB.Internal
        , readInt
        , Int64
        , runIdentity
+       , MSET(..)
+       , HLRDB.Internal.splitWith
        ) where
 
 import Data.Functor.Identity
@@ -131,4 +133,22 @@ readInt as
     end _ 0 _ = 0
     end True _ n = negate n
     end _ _ n = n
+
+type DList a = ([ a ] -> [ a ])
+
+-- | Aggregated @mset@ query
+newtype MSET = MSET { runMSET :: DList (ByteString , Maybe ByteString) }
+
+instance Semigroup MSET where
+  (<>) (MSET as) (MSET bs) = MSET (as . bs)
+
+instance Monoid MSET where
+  mempty = MSET $ (<>) []
+
+splitWith :: (a -> Either b c) -> [ a ] -> ([ b ] , [ c ])
+splitWith f = foldr g mempty
+  where
+    g x (as , bs) = case f x of
+      Left a -> (a : as , bs)
+      Right b -> (as , b : bs)
 

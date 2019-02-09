@@ -12,6 +12,8 @@ module HLRDB.Core
        , mget
        , set
        , set'
+       , liftqs
+       , mset
        , incr
        , incrby
        , decr
