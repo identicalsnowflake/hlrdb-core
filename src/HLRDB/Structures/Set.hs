@@ -43,12 +43,20 @@ scard p =
   . Redis.scard
   . primKey p
 
--- | Retrieve a random element from a set
+-- | Retrieve a random element from a set. The underlying Redis primitive uses a poor but efficient distribution, biased by the underlying hash bucket allocation.
 srandmember :: MonadRedis m => RedisSet a b -> a -> m (Maybe b)
 srandmember p@(RSet (E _ _ d)) =
     (fmap . fmap) (d . pure)
   . unwrap
   . Redis.srandmember
+  . primKey p
+
+-- | Retrieve up to N unique random elements, limited by the cardinality of the set.
+srandmemberN :: MonadRedis m => RedisSet a b -> Integer -> a -> m [ b ]
+srandmemberN p@(RSet (E _ _ d)) n =
+    (fmap . fmap) (d . pure)
+  . unwrap
+  . flip Redis.srandmemberN n
   . primKey p
 
 -- | Use a cursor to iterate a collection

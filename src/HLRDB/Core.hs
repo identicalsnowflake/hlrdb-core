@@ -45,6 +45,7 @@ module HLRDB.Core
        , srem
        , scard
        , srandmember
+       , srandmemberN
        , sscan
 
          -- * SSet

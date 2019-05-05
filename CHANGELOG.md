@@ -1,3 +1,7 @@
+# New in 0.1.4.0
+
+- `srandmembersN` command added
+
 # New in 0.1.3.0
 
 - `mset` command with batch processing.
