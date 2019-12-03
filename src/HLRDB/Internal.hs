@@ -1,8 +1,7 @@
 -- | Internal module. Not intended for public use.
 
 module HLRDB.Internal
-       (
-         probIO
+       ( probIO
        , primKey
        , unwrap
        , unwrapCursor
@@ -32,7 +31,7 @@ import Control.Monad.IO.Class
 import System.Random (randomRIO)
 
 
-probIO :: (MonadIO m) => Double -> m a -> m (Maybe a)
+probIO :: MonadIO m => Double -> m a -> m (Maybe a)
 probIO pr a =
   if pr >= 1.0 then Just <$> a else do
     r :: Double <- liftIO $ randomRIO (0, 1.0)
@@ -100,9 +99,10 @@ fixEmpty' f e t = case foldr ((:) . e) [] t of
   xs -> liftRedis $ f xs
 
 {-# INLINE foldM #-}
-foldM :: (Foldable t) => (a -> b) -> t a -> [ b ]
+foldM :: Foldable t => (a -> b) -> t a -> [ b ]
 foldM f t = foldr (\a xs -> f a : xs) [] t
 
+{-# INLINE decodeMInteger #-}
 decodeMInteger :: Maybe ByteString -> Int64
 decodeMInteger Nothing = 0
 decodeMInteger (Just bs) = readInt bs
@@ -140,9 +140,11 @@ type DList a = ([ a ] -> [ a ])
 newtype MSET = MSET { runMSET :: DList (ByteString , Maybe ByteString) }
 
 instance Semigroup MSET where
+  {-# INLINE (<>) #-}
   (<>) (MSET as) (MSET bs) = MSET (as . bs)
 
 instance Monoid MSET where
+  {-# INLINE mempty #-}
   mempty = MSET $ (<>) []
 
 splitWith :: (a -> Either b c) -> [ a ] -> ([ b ] , [ c ])

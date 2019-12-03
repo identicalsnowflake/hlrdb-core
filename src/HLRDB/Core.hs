@@ -5,8 +5,7 @@
 -- When using this package, you should always ensure that your Eq instances respect the induced equality via whatever serialization mechanism you've specified, since many commands perform comparisons in Redis directly.
 
 module HLRDB.Core
-       (
-         -- * Basic
+       ( -- * Basic
          get
        , liftq
        , mget
