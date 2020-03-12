@@ -1,3 +1,7 @@
+# New in 0.1.6.0
+
+- `getrange`, `setrange`, `getbit`, `setbit` added for new ByteString-based primitive
+
 # New in 0.1.4.0
 
 - `srandmembersN` command added

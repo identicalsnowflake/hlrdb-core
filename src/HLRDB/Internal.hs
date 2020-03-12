@@ -44,6 +44,7 @@ probIO pr a =
 primKey :: RedisStructure v a b -> a -> ByteString
 primKey (RKeyValue (E e _ _)) k = e k
 primKey (RKeyValueInteger e _ _) k = e k
+primKey (RKeyValueByteString e) k = e k
 primKey (RList (E e _ _) _) k = e k
 primKey (RHSet (E e _ _) _) k = e k
 primKey (RSet (E e _ _)) k = e k

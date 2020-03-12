@@ -20,6 +20,7 @@ data RedisStructure t a b where
   -- Do not allow specifying an encoding for Integer, since Redis commands like incr
   -- demand that *only* the standard encoding is used, e.g., 123 -> "123"
   RKeyValueInteger :: (a -> ByteString) -> (b -> Integer) -> (Integer -> b) -> RedisStructure (BASIC Integer) a b
+  RKeyValueByteString :: (a -> ByteString) -> RedisStructure (BASIC ByteString) a ByteString
   RList :: RE a b -> Maybe TrimScheme -> RedisStructure LIST a b
   RHSet :: RE a b -> HSET v -> RedisStructure (HSET v) a b
   RSet :: RE a b -> RedisStructure SET a b
@@ -29,6 +30,8 @@ data RedisStructure t a b where
 type RedisBasic k v = RedisStructure (BASIC ()) k v
 -- | Alias for simple Integer storage
 type RedisIntegral k v = RedisStructure (BASIC Integer) k v
+-- | Alias for indexable ByteString storage, allowing getting and setting ranges within the value. To enforce consistency across the low-level getrange/setrange commands, non-existent values are transparently rendered as empty ByteStrings. Note that the maximum size permitted in a single value by Redis is 512 MB.
+type RedisByteString k v = RedisStructure (BASIC ByteString) k ByteString
 -- | Alias for a Redis List
 type RedisList k v = RedisStructure LIST k v
 -- | Alias for a Redis HSet

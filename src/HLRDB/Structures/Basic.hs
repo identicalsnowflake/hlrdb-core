@@ -6,6 +6,7 @@ import Database.Redis as Redis
 import HLRDB.Primitives.Aggregate
 import HLRDB.Primitives.Redis
 import HLRDB.Internal
+import Data.ByteString (ByteString)
 import Data.ByteString.Char8 (pack)
 import qualified Data.HashMap.Strict as HM
 
@@ -18,11 +19,15 @@ get (RKeyValue (E k _ d)) a = liftRedis $ Redis.get (k a) >>= \case
 get (RKeyValueInteger k _ d) a = liftRedis $ Redis.get (k a) >>= \case
   Left e -> fail (show e)
   Right r -> pure $ d . fromIntegral $ decodeMInteger r
+get (RKeyValueByteString k) a = liftRedis $ Redis.get (k a) >>= \case
+  Left e -> fail (show e)
+  Right r -> pure (maybe mempty id r)
 
 -- | Construct a query to be used with @mget@. You may combine many of these together to create complex queries. Use @mget@ to execute the query back in the Redis monad. Works on @RedisBasic a b@ and @RedisIntegral a b@.
 liftq :: RedisStructure (BASIC w) a b -> a ⟿ b
 liftq (RKeyValue (E k _ d)) = T $ \f -> fmap d . f . k
 liftq (RKeyValueInteger k _ d) = T $ \f -> fmap (d . fromIntegral . decodeMInteger) . f . k
+liftq (RKeyValueByteString k) = T $ \f -> fmap (maybe mempty id) . f . k
 
 -- | Reify a (⟿) query into the Redis monad via a single mget command.
 mget :: MonadRedis m => a ⟿ b -> a -> m b
@@ -39,6 +44,9 @@ set (RKeyValue (E k e _)) a b = liftRedis $ case e b of
   Just bs -> ignore $ Redis.set (k a) bs
   Nothing -> ignore $ del [ k a ]
 set (RKeyValueInteger k e _) a i = liftRedis $ ignore $ Redis.set (k a) (pack $ show (e i))
+set (RKeyValueByteString k) a b = liftRedis $ if b == mempty
+  then ignore $ Redis.del [ k a ]
+  else ignore $ Redis.set (k a) b
 
 -- | Convenient alias for setting a value for an optional path
 set' :: MonadRedis m => RedisBasic a (Maybe b) -> a -> b -> m ()
@@ -50,6 +58,7 @@ set' (RKeyValue (E k e _)) a b = liftRedis $ case e (Just b) of
 liftqs :: RedisStructure (BASIC w) a b -> (a , b) -> MSET
 liftqs (RKeyValue (E k e _)) (a , b) = MSET $ (<>) [ (k a , e b) ]
 liftqs (RKeyValueInteger k e _) (a , b) = MSET $ (<>) [ (k a , Just $ pack (show (e b))) ]
+liftqs (RKeyValueByteString k) (a , b) = MSET $ (<>) [ (k a , Just b) ]
 
 -- | Execute a @MSET@ query.
 mset :: MonadRedis m => MSET -> m ()
@@ -75,6 +84,9 @@ setex (RKeyValue (E k e _)) a t b = liftRedis $ case e b of
   Just bs -> ignore $ Redis.setex (k a) t bs
   Nothing -> ignore $ del [ k a ]
 setex (RKeyValueInteger k e _) a t i = liftRedis $ ignore $ Redis.setex (k a) t (pack $ show (e i))
+setex (RKeyValueByteString k) a t b = liftRedis $ if b == mempty
+  then ignore $ Redis.del [ k a ]
+  else ignore $ Redis.setex (k a) t b
 
 -- | Increment an Integer in Redis. Empty values are treated as 0.
 incr :: MonadRedis m => RedisIntegral a b -> a -> m b
@@ -107,4 +119,33 @@ decrby (RKeyValueInteger p e d) k =
   . unwrap
   . Redis.decrby (p k)
   . e
+
+-- | Start and end indices are inclusive. Unlike @get@, the empty bytestring is returned if the key does not exist in Redis or if the specified range is out of range.
+getrange :: MonadRedis m => RedisByteString a ByteString -> a -> Integer -> Integer -> m ByteString
+getrange (RKeyValueByteString p) k start =
+    unwrap
+  . Redis.getrange (p k) start
+
+-- | The @Integer@ paramter is the offset. Returns the length of the string after the command has been executed.
+setrange :: MonadRedis m => RedisByteString a ByteString -> a -> Integer -> ByteString -> m Integer
+setrange (RKeyValueByteString p) k start =
+    unwrap
+  . Redis.setrange (p k) start
+
+-- | Get the bit stored at the specified offset. Note that if no value exists in Redis or if the specified range is outside the defined range, @False@ will be returned by default.
+getbit :: MonadRedis m => RedisByteString a ByteString -> a -> Integer -> m Bool
+getbit (RKeyValueByteString p) k =
+    fmap (1==)
+  . unwrap
+  . Redis.getbit (p k)
+
+-- | Set the bit at the specified offset. If the offset is outside the existing defined range of the value, 0s are implicitly inserted to fill the intermediate space. Returns the existing value of this bit, as defined by the @getbit@ semantics above.
+setbit :: MonadRedis m => RedisByteString a ByteString -> a -> Integer -> Bool -> m Bool
+setbit (RKeyValueByteString p) k i =
+    fmap (1==)
+  . unwrap
+  . Redis.setbit (p k) i
+  . \case
+       True -> "1"
+       False -> "0"
 

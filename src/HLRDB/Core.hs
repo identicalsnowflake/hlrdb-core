@@ -18,6 +18,10 @@ module HLRDB.Core
        , incrby
        , decr
        , decrby
+       , getrange
+       , setrange
+       , getbit
+       , setbit
 
          -- * List         
        , lrange
