@@ -51,7 +51,7 @@ hmget p@(RHSet (E _ _ d) (HSET e _)) k t = do
 -- | Set via key and subkey
 hset :: MonadRedis m => RedisHSet a s b -> a -> s -> b -> m (ActionPerformed Creation)
 hset p@(RHSet (E _ eb _) (HSET e _)) k s =
-    unwrapCreatedBool
+    unwrapCreated
   . Redis.hset (primKey p k) (e s)
   . runIdentity
   . eb
