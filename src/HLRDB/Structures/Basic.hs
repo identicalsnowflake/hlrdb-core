@@ -75,7 +75,7 @@ mset = go . flip runMSET []
     mdel' [] = pure 0
     mdel' xs = unwrap $ liftRedis $ Redis.del xs
     
-    mset' [] = pure undefined
+    mset' [] = pure Ok
     mset' xs = unwrap $ liftRedis $ Redis.mset xs
 
 -- | Set a value together with a given expiration timeout (in seconds).

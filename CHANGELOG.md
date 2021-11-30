@@ -1,3 +1,6 @@
+# Fixed in 0.1.6.2
+- Removed `undefined` in empty `mset` case
+
 # New in 0.1.6.0
 
 - `getrange`, `setrange`, `getbit`, `setbit` added for new ByteString-based primitive
