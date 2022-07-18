@@ -1,3 +1,6 @@
+# 0.2.0.0
+- Query aggregation is now done via the `Q` Applicative, which can be reified into the `Redis` monad via `mget`. Using `ApplicativeDo`, querying via @Q@ is as ergonomic as executing individual `get` commands.
+
 # Fixed in 0.1.6.2
 - Removed `undefined` in empty `mset` case
 

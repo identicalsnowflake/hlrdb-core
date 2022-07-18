@@ -1,7 +1,10 @@
+{-# LANGUAGE BlockArguments #-}
+
 -- | Basic storage is simply a key-value lookup in Redis.
 
 module HLRDB.Structures.Basic where
 
+import Control.Lens (unsafePartsOf)
 import Database.Redis as Redis
 import HLRDB.Primitives.Aggregate
 import HLRDB.Primitives.Redis
@@ -23,15 +26,15 @@ get (RKeyValueByteString k) a = liftRedis $ Redis.get (k a) >>= \case
   Left e -> fail (show e)
   Right r -> pure (maybe mempty id r)
 
--- | Construct a query to be used with @mget@. You may combine many of these together to create complex queries. Use @mget@ to execute the query back in the Redis monad. Works on @RedisBasic a b@ and @RedisIntegral a b@.
-liftq :: RedisStructure (BASIC w) a b -> a ⟿ b
-liftq (RKeyValue (E k _ d)) = T $ \f -> fmap d . f . k
-liftq (RKeyValueInteger k _ d) = T $ \f -> fmap (d . fromIntegral . decodeMInteger) . f . k
-liftq (RKeyValueByteString k) = T $ \f -> fmap (maybe mempty id) . f . k
+-- | @Q@ is an @Applicative@ that can be used to aggregate many independent queries, all to be reified in a single bulk @mget@ request. Works on @RedisBasic a b@ and @RedisIntegral a b@.
+liftq :: RedisStructure (BASIC w) a b -> a -> Q b
+liftq (RKeyValue (E k _ d)) i = Q \f -> fmap d . f . const (k i)
+liftq (RKeyValueInteger k _ d) i = Q \f -> fmap (d . fromIntegral . decodeMInteger) . f . const (k i)
+liftq (RKeyValueByteString k) i = Q \f -> fmap (maybe mempty id) . f . const (k i)
 
--- | Reify a (⟿) query into the Redis monad via a single mget command.
-mget :: MonadRedis m => a ⟿ b -> a -> m b
-mget = runT (liftRedis . mget')
+-- | Reify from the @Q@ applicative into the @Redis@ monad using a single @mget@ command.
+mget :: MonadRedis m => Q a -> m a
+mget = \(Q f) -> unsafePartsOf f (liftRedis . mget') ()
   where
     mget' [] = pure []
     mget' xs = Redis.mget xs >>= \case
